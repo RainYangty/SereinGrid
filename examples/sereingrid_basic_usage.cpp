@@ -1,6 +1,6 @@
+#include "../include/SereinGrid.hpp"
 #include <iostream>
 #include <vector>
-#include "../include/SereinGrid.hpp"
 
 int main()
 {
@@ -21,7 +21,7 @@ int main()
     // 2. 基础数值写入与读取（支持正负坐标与跨宏观块存储）
     std::cout << "[2] 写入并读取测试数据...\n";
     grid.set_value(5, 5, 10.5f);
-    grid.set_value(-12, 8, 20.0f);  // 位于负 X 轴区域
+    grid.set_value(-12, 8, 20.0f);   // 位于负 X 轴区域
     grid.set_value(-15, -25, 15.0f); // 位于第三象限
 
     std::cout << " - 点 (5, 5) 的值: " << grid.get_value(5, 5) << " (期望: 10.5)\n";
@@ -56,9 +56,8 @@ int main()
     std::vector<std::pair<int, int>> maxima = grid.find_local_maxima(R_phys);
 
     std::cout << " - 在半径 R_phys=" << R_phys << " 下找到的局部极大值点坐标:\n";
-    for (const auto& pt : maxima)
-    {
-        std::cout << "   -> 坐标: (" << pt.first << ", " << pt.second 
+    for (const auto& pt : maxima) {
+        std::cout << "   -> 坐标: (" << pt.first << ", " << pt.second
                   << ") | 强度: " << grid.get_value(pt.first, pt.second) << "\n";
     }
     std::cout << "\n";
