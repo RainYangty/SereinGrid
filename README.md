@@ -69,18 +69,14 @@ HierarchicalGrid (unordered_map<uint64_t, MacroNode>)
 ## API 接口规范
 
 ### 1. 初始化与配置
-
+<!-- markdownlint-disable -->
 | 接口名称 | 参数定义 | 说明 |
 | --- | --- | --- |
-| `HierarchicalGrid` | `int expansion_scale = 10`<br>
-
-<br>`float zero_epsilon = 1e-6f`<br>
-
-<br>`float physical_spacing = 1.0f` | 构造函数。配置宏观块展开尺度 $N$（即块大小 $N \times N$）、零值判决容差 tolerance 及物理采样间距。 |
+| `HierarchicalGrid` | `int expansion_scale = 10, float zero_epsilon = 1e-6f, float physical_spacing = 1.0f` | 构造函数。配置宏观块展开尺度 $N$（即块大小 $N \times N$）、零值判决容差 tolerance 及物理采样间距。 |
 | `get_scale` | - | 返回宏观块尺度 $N$。 |
 | `get_spacing` | - | 返回采样点的物理间距 `spacing`。 |
 | `get_zero_epsilon` | - | 返回判决零值的容差阈值 `zero_epsilon`。 |
-
+<!-- markdownlint-restore -->
 ### 2. 数据读写与更新
 
 | 接口名称 | 参数定义 | 说明 |
