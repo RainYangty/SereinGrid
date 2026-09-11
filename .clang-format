@@ -188,7 +188,7 @@ TabWidth: 4
 UseTab: Never
 # VerilogBreakBetweenInstancePorts:
 # WhitespaceSensitiveMacros:
-RemoveEmptyLinesInUnwrappedLines: true
+# RemoveEmptyLinesInUnwrappedLines: true
 ---
 Language: ObjC
 BasedOnStyle: "WebKit"
