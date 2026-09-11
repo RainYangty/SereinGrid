@@ -37,6 +37,25 @@ void test_negative_coordinates()
                 "neighboring coordinate should remain empty");
 }
 
+        void test_coordinate_conversion()
+        {
+            Grid grid = make_grid();
+            int U, V, u, v;
+            int x, y;
+
+            grid.global_to_local(-12, -25, U, V, u, v);
+            expect(U == -2 && V == -3 && u == 8 && v == 5,
+                "global_to_local returned unexpected coordinates");
+
+            grid.macro_to_global(U, V, x, y);
+            expect(x == -20 && y == -30,
+                "macro_to_global returned unexpected macro origin");
+
+            grid.local_to_global(U, V, u, v, x, y);
+            expect(x == -12 && y == -25,
+                "local_to_global did not round-trip the coordinates");
+        }
+
 void test_add_and_pruning()
 {
     Grid grid = make_grid();
@@ -119,6 +138,7 @@ int main()
         void (*run)();
     } test_cases[] = {
         {"negative coordinates", test_negative_coordinates},
+        {"coordinate conversion", test_coordinate_conversion},
         {"add and pruning", test_add_and_pruning},
         {"NMS suppression", test_nms_suppression},
         {"grid merge", test_grid_merge},

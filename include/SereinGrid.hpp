@@ -237,6 +237,20 @@ public:
 		v = floor_mod(y, N);
 	}
 
+	// 宏观坐标转换为该宏观块原点的全局坐标
+	void macro_to_global(int U, int V, int& x, int& y) const
+	{
+		x = U * N;
+		y = V * N;
+	}
+
+	// 宏观坐标与微观局部坐标转换为全局坐标
+	void local_to_global(int U, int V, int u, int v, int& x, int& y) const
+	{
+		x = U * N + u;
+		y = V * N + v;
+	}
+
 	// 覆盖赋值（支持懒展开）
 	void set_value(int x, int y, float value)
 	{
