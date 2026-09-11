@@ -1,0 +1,50 @@
+# GitHub Actions 工作流在仓库 Actions 页面中显示的名称
+name: C++ CI
+
+# 触发条件：当向 main 或 master 分支推送代码或提交 Pull Request 时触发 CI
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    # 动态显示在 GitHub UI 上的任务名称（例如：ubuntu-latest (gcc)）
+    name: ${{ matrix.os }} (${{ matrix.compiler }})
+    
+    # 指定当前 Job 运行的操作系统镜像环境
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      # 设置为 false：某个平台失败时，不终止其他平台的运行，方便排查平台差异导致的问题
+      fail-fast: false
+      
+      # 构建矩阵：覆盖 Linux (GCC/Clang)、macOS (Apple Clang) 和 Windows (MSVC)
+      matrix:
+        include:
+          - os: ubuntu-latest
+            compiler: gcc
+          - os: ubuntu-latest
+            compiler: clang
+          - os: macos-latest
+            compiler: apple-clang
+          - os: windows-latest
+            compiler: msvc
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Configure CMake
+      run: >
+        cmake -B build 
+        -DCMAKE_BUILD_TYPE=Release 
+        -DBUILD_TESTS=ON 
+        -DBUILD_EXAMPLES=ON
+
+    - name: Build
+      run: cmake --build build --config Release
+
+    - name: Run Tests
+      run: ctest --test-dir build -C Release --output-on-failure

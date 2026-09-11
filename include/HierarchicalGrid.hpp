@@ -4,10 +4,15 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <memory>
 #include <stdexcept>
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+namespace hgrid {
+
+namespace detail {
 
 // ==================== 基础数据节点定义 ====================
 
@@ -27,53 +32,46 @@ struct MacroNode
 	int max_u = -1;
 	int max_v = -1;
 
-	MicroNode* fine_grid = nullptr; // 指向 N x N 连续内存
+	std::unique_ptr<MicroNode[]> fine_grid = nullptr; // 指向 N x N 连续内存
 
 	MacroNode() = default;
-
-	~MacroNode() { delete[] fine_grid; }
 
 	// 禁用拷贝，防止指针浅拷贝导致的 Double Free
 	MacroNode(const MacroNode&) = delete;
 	MacroNode& operator=(const MacroNode&) = delete;
 
-	// 移动语义（适配 std::unordered_map 扩容与 Rehash）
 	MacroNode(MacroNode&& other) noexcept :
 		is_expanded(other.is_expanded),
 		active_count(other.active_count),
 		max_value(other.max_value),
 		max_u(other.max_u),
 		max_v(other.max_v),
-		fine_grid(other.fine_grid)
+		fine_grid(std::move(other.fine_grid))
 	{
-		other.fine_grid = nullptr;
-		other.is_expanded = false;
-		other.active_count = 0;
-		other.max_value = -std::numeric_limits<float>::infinity();
-		other.max_u = -1;
-		other.max_v = -1;
+		other.reset_metadata();
 	}
 
 	MacroNode& operator=(MacroNode&& other) noexcept
 	{
 		if (this != &other)
 		{
-			delete[] fine_grid;
 			is_expanded = other.is_expanded;
 			active_count = other.active_count;
 			max_value = other.max_value;
 			max_u = other.max_u;
-			max_v = other.max_v;
-			fine_grid = other.fine_grid;
-
-			other.fine_grid = nullptr;
-			other.is_expanded = false;
-			other.active_count = 0;
-			other.max_value = -std::numeric_limits<float>::infinity();
-			other.max_u = -1;
-			other.max_v = -1;
+			fine_grid = std::move(other.fine_grid);
+			other.reset_metadata();
 		}
 		return *this;
+	}
+
+	void reset_metadata()
+	{
+		is_expanded = false;
+		active_count = 0;
+		max_value = -std::numeric_limits<float>::infinity();
+		max_u = -1;
+		max_v = -1;
 	}
 
 	void expand(int N, float default_val = 0.0f)
@@ -82,7 +80,7 @@ struct MacroNode
 		{
 			return;
 		}
-		fine_grid = new MicroNode[N * N];
+		fine_grid = std::make_unique<MicroNode[]>(N * N);
 		is_expanded = true;
 
 		float init_val = (max_value != -std::numeric_limits<float>::infinity()) ? max_value : default_val;
@@ -174,8 +172,7 @@ struct MacroNode
 
 	void collapse()
 	{
-		delete[] fine_grid;
-		fine_grid = nullptr;
+		fine_grid.reset();
 		is_expanded = false;
 		active_count = 0;
 		max_value = -std::numeric_limits<float>::infinity();
@@ -186,6 +183,8 @@ struct MacroNode
 	bool empty() const { return !is_expanded || !fine_grid || active_count == 0; }
 };
 
+} // namespace detail
+
 // ==================== 分层空间网格主类 ====================
 
 class HierarchicalGrid
@@ -194,7 +193,7 @@ private:
 	int N; // 展开精度 (1个宏观网格展开为 N x N)
 	float spacing;
 	float zero_epsilon;
-	std::unordered_map<uint64_t, MacroNode> space;
+	std::unordered_map<uint64_t, detail::MacroNode> space;
 
 	inline uint64_t get_key(int U, int V) const
 	{
@@ -269,7 +268,7 @@ public:
 		global_to_local(x, y, U, V, u, v);
 
 		uint64_t key = get_key(U, V);
-		MacroNode& macro = space[key];
+		detail::MacroNode& macro = space[key];
 		if (!macro.is_expanded)
 		{
 			macro.expand(N);
@@ -307,7 +306,7 @@ public:
 		{
 			return 0.0f;
 		}
-		const MicroNode& node = it->second.fine_grid[u * N + v];
+		const detail::MicroNode& node = it->second.fine_grid[u * N + v];
 		return node.active ? node.value : 0.0f;
 	}
 
@@ -343,7 +342,7 @@ public:
 					continue;
 				}
 
-				const MacroNode& target_macro = it->second;
+				const detail::MacroNode& target_macro = it->second;
 
 				// 1. 【宏观剪枝】块内最大值都赶不上当前点，跳过整块
 				if (target_macro.max_value < current_val)
@@ -390,7 +389,7 @@ public:
 							continue;
 						}
 
-						const MicroNode& neighbor = target_macro.fine_grid[u * N + v];
+						const detail::MicroNode& neighbor = target_macro.fine_grid[u * N + v];
 						if (!neighbor.active)
 						{
 							continue;
@@ -419,7 +418,7 @@ public:
 		std::vector<std::pair<int, int>> maxima;
 		for (const auto& entry : space)
 		{
-			const MacroNode& macro = entry.second;
+			const detail::MacroNode& macro = entry.second;
 			if (!macro.is_expanded || !macro.fine_grid)
 			{
 				continue;
@@ -431,7 +430,7 @@ public:
 			{
 				for (int v = 0; v < N; ++v)
 				{
-					const MicroNode& node = macro.fine_grid[u * N + v];
+					const detail::MicroNode& node = macro.fine_grid[u * N + v];
 					if (node.active && node.value > 0.0f)
 					{
 						int x = U * N + u;
@@ -472,7 +471,7 @@ public:
 			{
 				for (int v = 0; v < N; ++v)
 				{
-					const MicroNode& node = other_macro.fine_grid[u * N + v];
+					const detail::MicroNode& node = other_macro.fine_grid[u * N + v];
 					if (node.active)
 					{
 						// 1. 计算源网格 (other) 的全局逻辑坐标
@@ -494,5 +493,7 @@ public:
 	// 清空整个网格空间
 	void clear() { space.clear(); }
 };
+
+} // namespace hgrid
 
 #endif // HIERARCHICAL_GRID_HPP

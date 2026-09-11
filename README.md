@@ -114,7 +114,7 @@ $$\text{Dist}^2 = dx^2 + dx \cdot dy + dy^2$$
 int main()
 {
     // 初始化网格：展开尺度 N=10，零容差 1e-5，物理间距 0.5m
-    HierarchicalGrid grid(10, 1e-5f, 0.5f);
+    hgrid::HierarchicalGrid grid(10, 1e-5f, 0.5f);
 
     // 写入模拟置信度数据
     grid.set_value(15, 20, 0.85f);
