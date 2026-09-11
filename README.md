@@ -1,21 +1,52 @@
 # HierarchicalGrid
 
-`HierarchicalGrid` 是用于稀疏二维空间数据的高性能分层网格组件，专为空间特征提取、动态累加以及基于非极大值抑制（NMS）的局部极值筛选设计。通过两级网格结构（MacroNode / MicroNode），结合 `std::unordered_map` 的稀疏存储与连续内存块的缓存友好性，实现了低内存占用与高效查询。
+![Language](https://img.shields.io/badge/language-C%2B%2B14-brightgreen.svg)
+
+`HierarchicalGrid` 是用于稀疏二维空间数据的高性能分层网格组件，专为空间特征提取、动态累加以及基于非极大值抑制（NMS）的局部极值筛选设计。通过两级网格结构（`MacroNode` / `MicroNode`），结合 `std::unordered_map` 的稀疏存储与连续内存块的缓存友好性，实现了低内存占用与高效查询。
+
+
+## 快速集成
+
+本项目为 Header-only 库，仅依赖 C++14 及以上标准库。
+
+### 方法 1：直接引入头文件
+
+将 `include/HierarchicalGrid.hpp` 复制到项目头文件目录中即可：
+
+```cpp
+#include "HierarchicalGrid.hpp"
+```
+
+### 方法 2：通过 CMake FetchContent 引入
+
+在项目的 `CMakeLists.txt` 中添加：
+
+```cmake
+include(FetchContent)
+FetchContent_Declare(
+    HierarchicalGrid
+    GIT_REPOSITORY https://github.com/your_username/HierarchicalGrid.git
+    GIT_TAG        main
+)
+FetchContent_MakeAvailable(HierarchicalGrid)
+
+target_link_libraries(your_target PRIVATE HierarchicalGrid)
+```
 
 
 ## 模块架构设计
 
 网格采用分层展开与动态懒加载机制，解决稀疏空间下内存浪费与遍历开销大的问题。
 
-```
+```text
 HierarchicalGrid (unordered_map<uint64_t, MacroNode>)
  ├── Key: (U << 32) | V  (宏观空间块索引)
- └── MacroNode (16 byte 元数据 + 极值追踪)
-      └── fine_grid -> MicroNode[N * N] (按需分配的连续内存块)
+ └── MacroNode (元数据 + 极值追踪)
+      └── fine_grid -> unique_ptr<MicroNode[]>(N * N) (按需分配的连续内存块)
 
 ```
 
-### 1. 数据结构定义
+### 数据结构定义
 
 * **`MicroNode`**：最小空间数据节点。
 * `float value`：节点的特征值或置信度。
@@ -25,12 +56,15 @@ HierarchicalGrid (unordered_map<uint64_t, MacroNode>)
 * **`MacroNode`**：宏观网格块（包含 $N \times N$ 个微观节点）。
 * **懒加载管理**：初始化时不分配微观网格内存，仅在首次写入数据时调用 `expand()` 动态分配连续数组。
 * **$O(1)$ 极值追踪**：内部实时维护块内极大值 `max_value` 及其微观坐标 `(max_u, max_v)`，为后续 NMS 提供高效宏观剪枝策略。
-* **内存安全**：显式禁用拷贝语义（`delete` 拷贝构造/赋值），实现高效且安全的移动语义，防止 `std::unordered_map` 在扩容 Rehash 时发生深拷贝开销或内存二次释放。
+* **内存安全**：基于 `std::unique_ptr` 管理连续内存，显式禁用拷贝语义，实现高效且安全的移动语义，彻底避免 `std::unordered_map` 在 Rehash 时的二次释放与深拷贝开销。
 
 
 * **`HierarchicalGrid`**：全局空间映射网格。
 * 基于 64 位整型 Key 映射宏观坐标 $(U, V)$。
 * 内置向负无穷取整的整除与取模算法（`floor_div` / `floor_mod`），原生支持四个象限的负坐标访问。
+
+
+
 
 ## API 接口规范
 
@@ -42,9 +76,10 @@ HierarchicalGrid (unordered_map<uint64_t, MacroNode>)
 
 <br>`float zero_epsilon = 1e-6f`<br>
 
-<br>`float physical_spacing = 1.0f` | 构造函数。配置宏观块展开尺度 $N$（即块大小 $N \times N$）、零值判决容 tolerance 及物理采样间距。 |
+<br>`float physical_spacing = 1.0f` | 构造函数。配置宏观块展开尺度 $N$（即块大小 $N \times N$）、零值判决容差 tolerance 及物理采样间距。 |
 | `get_scale` | - | 返回宏观块尺度 $N$。 |
 | `get_spacing` | - | 返回采样点的物理间距 `spacing`。 |
+| `get_zero_epsilon` | - | 返回判决零值的容差阈值 `zero_epsilon`。 |
 
 ### 2. 数据读写与更新
 
@@ -63,6 +98,8 @@ HierarchicalGrid (unordered_map<uint64_t, MacroNode>)
 | `is_local_maximum` | `int x, int y, float R_phys` | `bool` | 判断坐标 $(x, y)$ 是否为物理半径 `R_phys` 范围内的局部极大值（内建三层剪枝算法）。 |
 | `find_local_maxima` | `float R_phys` | `std::vector<std::pair<int, int>>` | 遍历网格内所有激活点，提取物理半径 `R_phys` 范围内的局部极大值坐标集合。 |
 | `merge_from` | `const HierarchicalGrid& other, int offset_x = 0, int offset_y = 0` | `void` | 将另一个网格的数据图层融合至当前网格，支持施加全局空间坐标偏移。 |
+
+
 
 ## 核心算法细节
 
