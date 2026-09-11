@@ -1,5 +1,5 @@
 # https://clang.llvm.org/docs/ClangFormatStyleOptions.html
-# for clang-format 20.0.0
+# for clang-format 20.1.0
 Language: Cpp
 BasedOnStyle: "WebKit"
 # AccessModifierOffset: 2
@@ -188,7 +188,7 @@ TabWidth: 4
 UseTab: Never
 # VerilogBreakBetweenInstancePorts:
 # WhitespaceSensitiveMacros:
-# RemoveEmptyLinesInUnwrappedLines: true
+RemoveEmptyLinesInUnwrappedLines: true
 ---
 Language: ObjC
 BasedOnStyle: "WebKit"
