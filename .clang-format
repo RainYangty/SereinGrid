@@ -145,7 +145,7 @@ PointerAlignment: Left
 #  - constexpr
 #  - type
 ReferenceAlignment: Left
-ReflowComments: Always
+ReflowComments: true
 RemoveBracesLLVM: false
 RemoveParentheses: Leave
 RemoveSemicolon: false
