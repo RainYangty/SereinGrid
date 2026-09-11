@@ -1,17 +1,17 @@
 #include <iostream>
 #include <vector>
-#include "../include/HierarchicalGrid.hpp"
+#include "../include/SereinGrid.hpp"
 
 int main()
 {
-    std::cout << "=== HierarchicalGrid 基础使用示例 ===\n\n";
+    std::cout << "=== SereinGrid 基础使用示例 ===\n\n";
 
     // 1. 初始化分层网格
     // 参数含义：宏观网格展开尺寸 N=10, 零值阈值=1e-6, 物理间距=1.0f
     int scale = 10;
     float zero_eps = 1e-6f;
     float spacing = 1.0f;
-    hgrid::HierarchicalGrid grid(scale, zero_eps, spacing);
+    sereingrid::SereinGrid grid(scale, zero_eps, spacing);
 
     std::cout << "[1] 网格配置信息:\n";
     std::cout << " - 展开尺度 (N): " << grid.get_scale() << "x" << grid.get_scale() << "\n";
@@ -65,7 +65,7 @@ int main()
 
     // 5. 多图层/网格合并 (merge_from)
     std::cout << "[5] 测试网格合并与坐标偏移 (merge_from)...\n";
-    hgrid::HierarchicalGrid sub_grid(scale, zero_eps, spacing);
+    sereingrid::SereinGrid sub_grid(scale, zero_eps, spacing);
     sub_grid.set_value(0, 0, 3.0f);
     sub_grid.set_value(2, 2, 7.0f);
 

@@ -2,11 +2,11 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
-#include "../include/HierarchicalGrid.hpp"
+#include "../include/SereinGrid.hpp"
 
 namespace
 {
-using Grid = hgrid::HierarchicalGrid;
+using Grid = sereingrid::SereinGrid;
 
 Grid make_grid()
 {
@@ -87,19 +87,19 @@ void test_grid_merge()
 
 void test_moved_from_macro_node_can_be_reused()
 {
-    hgrid::detail::MacroNode source;
+    sereingrid::detail::SereinMacroNode source;
     source.expand(2);
 
-    hgrid::detail::MacroNode destination = std::move(source);
+    sereingrid::detail::SereinMacroNode destination = std::move(source);
     source.expand(2);
     source.set_micro_value(0, 0, 2, 1.0f);
 
     expect(destination.fine_grid != nullptr, "moved-to node lost its fine grid");
     expect(source.fine_grid != nullptr, "moved-from node was not reusable");
 
-        hgrid::detail::MacroNode assigned_source;
+        sereingrid::detail::SereinMacroNode assigned_source;
         assigned_source.expand(2);
-        hgrid::detail::MacroNode assigned_destination;
+        sereingrid::detail::SereinMacroNode assigned_destination;
         assigned_destination = std::move(assigned_source);
         assigned_source.expand(2);
         assigned_source.set_micro_value(1, 1, 2, 2.0f);

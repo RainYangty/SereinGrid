@@ -1,5 +1,5 @@
-#ifndef HIERARCHICAL_GRID_HPP
-#define HIERARCHICAL_GRID_HPP
+#ifndef SEREIN_GRID_HPP
+#define SEREIN_GRID_HPP
 
 #include <cmath>
 #include <cstdint>
@@ -10,19 +10,19 @@
 #include <utility>
 #include <vector>
 
-namespace hgrid {
+namespace sereingrid {
 
 namespace detail {
 
 // ==================== 基础数据节点定义 ====================
 
-struct MicroNode
+struct SereinMicroNode
 {
 	float value = 0.0f;	 // 用于 NMS 比较的特征值/置信度
 	bool active = false; // 是否被激活/赋值
 };
 
-struct MacroNode
+struct SereinMacroNode
 {
 	bool is_expanded = false;
 	int active_count = 0;
@@ -32,15 +32,15 @@ struct MacroNode
 	int max_u = -1;
 	int max_v = -1;
 
-	std::unique_ptr<MicroNode[]> fine_grid = nullptr; // 指向 N x N 连续内存
+	std::unique_ptr<SereinMicroNode[]> fine_grid = nullptr; // 指向 N x N 连续内存
 
-	MacroNode() = default;
+	SereinMacroNode() = default;
 
 	// 禁用拷贝，防止指针浅拷贝导致的 Double Free
-	MacroNode(const MacroNode&) = delete;
-	MacroNode& operator=(const MacroNode&) = delete;
+	SereinMacroNode(const SereinMacroNode&) = delete;
+	SereinMacroNode& operator=(const SereinMacroNode&) = delete;
 
-	MacroNode(MacroNode&& other) noexcept :
+	SereinMacroNode(SereinMacroNode&& other) noexcept :
 		is_expanded(other.is_expanded),
 		active_count(other.active_count),
 		max_value(other.max_value),
@@ -51,7 +51,7 @@ struct MacroNode
 		other.reset_metadata();
 	}
 
-	MacroNode& operator=(MacroNode&& other) noexcept
+	SereinMacroNode& operator=(SereinMacroNode&& other) noexcept
 	{
 		if (this != &other)
 		{
@@ -80,7 +80,7 @@ struct MacroNode
 		{
 			return;
 		}
-		fine_grid = std::make_unique<MicroNode[]>(N * N);
+		fine_grid = std::make_unique<SereinMicroNode[]>(N * N);
 		is_expanded = true;
 
 		float init_val = (max_value != -std::numeric_limits<float>::infinity()) ? max_value : default_val;
@@ -187,13 +187,13 @@ struct MacroNode
 
 // ==================== 分层空间网格主类 ====================
 
-class HierarchicalGrid
+class SereinGrid
 {
 private:
 	int N; // 展开精度 (1个宏观网格展开为 N x N)
 	float spacing;
 	float zero_epsilon;
-	std::unordered_map<uint64_t, detail::MacroNode> space;
+	std::unordered_map<uint64_t, detail::SereinMacroNode> space;
 
 	inline uint64_t get_key(int U, int V) const
 	{
@@ -211,7 +211,7 @@ private:
 	inline bool is_zero(float value) const { return std::fabs(value) <= zero_epsilon; }
 
 public:
-	explicit HierarchicalGrid(int expansion_scale = 10, float zero_epsilon = 1e-6f, float physical_spacing = 1.0f) :
+	explicit SereinGrid(int expansion_scale = 10, float zero_epsilon = 1e-6f, float physical_spacing = 1.0f) :
 		N(expansion_scale),
 		spacing(physical_spacing),
 		zero_epsilon(zero_epsilon)
@@ -268,7 +268,7 @@ public:
 		global_to_local(x, y, U, V, u, v);
 
 		uint64_t key = get_key(U, V);
-		detail::MacroNode& macro = space[key];
+		detail::SereinMacroNode& macro = space[key];
 		if (!macro.is_expanded)
 		{
 			macro.expand(N);
@@ -306,7 +306,7 @@ public:
 		{
 			return 0.0f;
 		}
-		const detail::MicroNode& node = it->second.fine_grid[u * N + v];
+		const detail::SereinMicroNode& node = it->second.fine_grid[u * N + v];
 		return node.active ? node.value : 0.0f;
 	}
 
@@ -342,7 +342,7 @@ public:
 					continue;
 				}
 
-				const detail::MacroNode& target_macro = it->second;
+				const detail::SereinMacroNode& target_macro = it->second;
 
 				// 1. 【宏观剪枝】块内最大值都赶不上当前点，跳过整块
 				if (target_macro.max_value < current_val)
@@ -389,7 +389,7 @@ public:
 							continue;
 						}
 
-						const detail::MicroNode& neighbor = target_macro.fine_grid[u * N + v];
+						const detail::SereinMicroNode& neighbor = target_macro.fine_grid[u * N + v];
 						if (!neighbor.active)
 						{
 							continue;
@@ -418,7 +418,7 @@ public:
 		std::vector<std::pair<int, int>> maxima;
 		for (const auto& entry : space)
 		{
-			const detail::MacroNode& macro = entry.second;
+			const detail::SereinMacroNode& macro = entry.second;
 			if (!macro.is_expanded || !macro.fine_grid)
 			{
 				continue;
@@ -430,7 +430,7 @@ public:
 			{
 				for (int v = 0; v < N; ++v)
 				{
-					const detail::MicroNode& node = macro.fine_grid[u * N + v];
+					const detail::SereinMicroNode& node = macro.fine_grid[u * N + v];
 					if (node.active && node.value > 0.0f)
 					{
 						int x = U * N + u;
@@ -447,11 +447,11 @@ public:
 	}
 
 	// 两个网格层级合并
-	void merge_from(const HierarchicalGrid& other, int offset_x = 0, int offset_y = 0)
+	void merge_from(const SereinGrid& other, int offset_x = 0, int offset_y = 0)
 	{
 		if (N != other.N || spacing != other.spacing)
 		{
-			throw std::invalid_argument("HierarchicalGrid scales and physical spacing must match");
+			throw std::invalid_argument("SereinGrid scales and physical spacing must match");
 		}
 
 		for (const auto& entry : other.space)
@@ -471,7 +471,7 @@ public:
 			{
 				for (int v = 0; v < N; ++v)
 				{
-					const detail::MicroNode& node = other_macro.fine_grid[u * N + v];
+					const detail::SereinMicroNode& node = other_macro.fine_grid[u * N + v];
 					if (node.active)
 					{
 						// 1. 计算源网格 (other) 的全局逻辑坐标
@@ -494,6 +494,6 @@ public:
 	void clear() { space.clear(); }
 };
 
-} // namespace hgrid
+} // namespace sereingrid
 
-#endif // HIERARCHICAL_GRID_HPP
+#endif // SEREIN_GRID_HPP
