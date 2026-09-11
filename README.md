@@ -2,7 +2,6 @@
 
 `HierarchicalGrid` 是用于稀疏二维空间数据的高性能分层网格组件，专为空间特征提取、动态累加以及基于非极大值抑制（NMS）的局部极值筛选设计。通过两级网格结构（MacroNode / MicroNode），结合 `std::unordered_map` 的稀疏存储与连续内存块的缓存友好性，实现了低内存占用与高效查询。
 
----
 
 ## 模块架构设计
 
@@ -32,10 +31,6 @@ HierarchicalGrid (unordered_map<uint64_t, MacroNode>)
 * **`HierarchicalGrid`**：全局空间映射网格。
 * 基于 64 位整型 Key 映射宏观坐标 $(U, V)$。
 * 内置向负无穷取整的整除与取模算法（`floor_div` / `floor_mod`），原生支持四个象限的负坐标访问。
-
-
-
----
 
 ## API 接口规范
 
@@ -67,13 +62,7 @@ HierarchicalGrid (unordered_map<uint64_t, MacroNode>)
 | --- | --- | --- | --- |
 | `is_local_maximum` | `int x, int y, float R_phys` | `bool` | 判断坐标 $(x, y)$ 是否为物理半径 `R_phys` 范围内的局部极大值（内建三层剪枝算法）。 |
 | `find_local_maxima` | `float R_phys` | `std::vector<std::pair<int, int>>` | 遍历网格内所有激活点，提取物理半径 `R_phys` 范围内的局部极大值坐标集合。 |
-| `merge_from` | `const HierarchicalGrid& other`<br>
-
-<br>`int offset_x = 0`<br>
-
-<br>`int offset_y = 0` | `void` | 将另一个网格的数据图层融合至当前网格，支持施加全局空间坐标偏移。 |
-
----
+| `merge_from` | `const HierarchicalGrid& other, int offset_x = 0, int offset_y = 0` | `void` | 将另一个网格的数据图层融合至当前网格，支持施加全局空间坐标偏移。 |
 
 ## 核心算法细节
 
@@ -103,7 +92,6 @@ $$\text{Dist}^2 = dx^2 + dx \cdot dy + dy^2$$
 
 相较于传统直角坐标系，该度量方式在等边三角形/六边形空间采样点阵中具有更优的各向同性。
 
----
 
 ## 使用示例
 
