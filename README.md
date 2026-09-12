@@ -25,7 +25,7 @@
 include(FetchContent)
 FetchContent_Declare(
     SereinGrid
-    GIT_REPOSITORY https://github.com/your_username/SereinGrid.git
+    GIT_REPOSITORY https://github.com/RainYangty/SereinGrid.git
     GIT_TAG        main
 )
 FetchContent_MakeAvailable(SereinGrid)
@@ -39,7 +39,13 @@ target_link_libraries(your_target PRIVATE SereinGrid)
 网格采用分层展开与动态懒加载机制，解决稀疏空间下内存浪费与遍历开销大的问题。
 
 ```text
-SereinGrid (unordered_map<uint64_t, SereinMacroNode>)
+include/SereinGrid.hpp (公共兼容入口)
+ └── include/sereingrid/SereinGrid.hpp (SereinGrid 类声明)
+     ├── detail/Coordinates.hpp (坐标转换与 Key 生成)
+     ├── detail/Nodes.hpp (微观/宏观节点定义)
+     └── SereinGrid.inl (Header-only 成员实现)
+
+SereinGrid::space (unordered_map<uint64_t, SereinMacroNode>)
  ├── Key: (U << 32) | V  (宏观空间块索引)
  └── SereinMacroNode (元数据 + 极值追踪)
      └── fine_grid -> unique_ptr<SereinMicroNode[]>(N * N) (按需分配的连续内存块)
@@ -76,6 +82,7 @@ SereinGrid (unordered_map<uint64_t, SereinMacroNode>)
 | `get_scale` | - | 返回宏观块尺度 $N$。 |
 | `get_spacing` | - | 返回采样点的物理间距 `spacing`。 |
 | `get_zero_epsilon` | - | 返回判决零值的容差阈值 `zero_epsilon`。 |
+| `global_to_local` | `int x, int y, int& U, int& V, int& u, int& v` | 将全局坐标转换为宏观坐标和微观局部坐标。 |
 | `macro_to_global` | `int U, int V, int& x, int& y` | 将宏观坐标转换为对应宏观块原点的全局坐标。 |
 | `local_to_global` | `int U, int V, int u, int v, int& x, int& y` | 将宏观坐标和微观局部坐标转换为全局坐标。 |
 
@@ -151,8 +158,10 @@ int main()
     auto maxima = grid.find_local_maxima(1.0f);
 
     std::cout << "Detected Local Maxima Count: " << maxima.size() << std::endl;
-    for (const auto& [x, y] : maxima)
+    for (const auto& point : maxima)
     {
+        const int x = point.first;
+        const int y = point.second;
         std::cout << "Max at (" << x << ", " << y << ") = " << grid.get_value(x, y) << std::endl;
     }
 
