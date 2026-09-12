@@ -1,4 +1,4 @@
-#include "../include/SereinGrid.hpp"
+#include "SereinGrid.hpp"
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
