@@ -9,6 +9,33 @@ on:
     branches: [ main, master ]
 
 jobs:
+  pull-request-metadata:
+    name: PR metadata
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    steps:
+      - name: Validate title and description
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = context.payload.pull_request.title.trim();
+            const body = (context.payload.pull_request.body || '').trim();
+            const titlePattern = /^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9][a-z0-9._/-]*\))?!?: .+/;
+            const errors = [];
+
+            if (!titlePattern.test(title)) {
+              errors.push('标题必须符合 Conventional Commits，例如：`feat: add coordinate conversion`。');
+            }
+            if (!body) {
+              errors.push('PR 描述不能为空。');
+            }
+
+            if (errors.length > 0) {
+              core.setFailed(errors.join('\n'));
+            }
+
   build-and-test:
     # 动态显示在 GitHub UI 上的任务名称（例如：ubuntu-latest (gcc)）
     name: ${{ matrix.os }} (${{ matrix.compiler }})
