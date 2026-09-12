@@ -2,131 +2,170 @@
 
 ![Language](https://img.shields.io/badge/language-C%2B%2B14-brightgreen.svg)
 
-`SereinGrid` 是用于稀疏二维空间数据的高性能分层网格组件，专为空间特征提取、动态累加以及基于非极大值抑制（NMS）的局部极值筛选设计。通过两级网格结构（`SereinMacroNode` / `SereinMicroNode`），结合 `std::unordered_map` 的稀疏存储与连续内存块的缓存友好性，实现了低内存占用与高效查询。
+`SereinGrid` 是一个用于稀疏二维空间数据的高性能分层网格库，适用于空间特征提取、动态累加以及基于非极大值抑制（NMS）的局部极大值筛选。
 
+它采用两级稀疏网格结构：宏观块级索引和微观单元级存储，结合 `std::unordered_map` 的稀疏布局与连续内存块的缓存友好性，实现了低内存占用、高查询效率，以及对负坐标的原生支持。
+
+## 项目定位
+
+- 目标场景：二维稀疏空间、动态扩张、局部极大值筛选
+- 设计特点：
+  - 宏观块级懒加载
+  - 稀疏存储，避免全局二维数组开销
+  - 负坐标兼容
+  - 统一的全局坐标 / 宏观坐标 / 局部坐标转换
+  - 基于物理距离的 NMS 检测
 
 ## 快速集成
 
-本项目为 Header-only 库，仅依赖 C++14 及以上标准库。
+本项目是 Header-only 库，仅依赖 C++14 标准库和 STL。
 
-### 方法 1：直接引入头文件
+### 方式 1：直接引入头文件
 
-将 `include/SereinGrid.hpp` 复制到项目头文件目录中即可：
+将仓库中的 `include/SereinGrid.hpp` 复制到你的项目头文件目录，然后这样使用：
 
 ```cpp
 #include "SereinGrid.hpp"
+
+int main()
+{
+    sereingrid::SereinGrid grid(10, 1e-6f, 1.0f);
+    grid.set_value(5, 7, 0.8f);
+    std::cout << grid.get_value(5, 7) << '\n';
+    return 0;
+}
 ```
 
-### 方法 2：通过 CMake FetchContent 引入
+### 方式 2：通过 CMake FetchContent 使用
 
-在项目的 `CMakeLists.txt` 中添加：
+在你的 `CMakeLists.txt` 中添加：
 
 ```cmake
 include(FetchContent)
+
 FetchContent_Declare(
     SereinGrid
-    GIT_REPOSITORY https://github.com/your_username/SereinGrid.git
+    GIT_REPOSITORY https://github.com/RainYangty/SereinGrid.git
     GIT_TAG        main
 )
+
 FetchContent_MakeAvailable(SereinGrid)
 
 target_link_libraries(your_target PRIVATE SereinGrid)
 ```
 
-
-## 模块架构设计
-
-网格采用分层展开与动态懒加载机制，解决稀疏空间下内存浪费与遍历开销大的问题。
+## 代码结构
 
 ```text
-SereinGrid (unordered_map<uint64_t, SereinMacroNode>)
- ├── Key: (U << 32) | V  (宏观空间块索引)
- └── SereinMacroNode (元数据 + 极值追踪)
-     └── fine_grid -> unique_ptr<SereinMicroNode[]>(N * N) (按需分配的连续内存块)
-
+SereinGrid/
+├── CMakeLists.txt
+├── README.md
+├── include/
+│   ├── SereinGrid.hpp                     # 公共兼容入口
+│   └── sereingrid/
+│       ├── SereinGrid.hpp                # 核心类声明
+│       ├── SereinGrid.inl                # 实现定义
+│       └── detail/
+│           ├── Coordinates.hpp           # 坐标转换与键生成
+│           └── Nodes.hpp                 # 宏观/微观节点定义
+├── tests/
+│   └── test_sereingrid.cpp              # 单元测试
+├── examples/
+│   └── sereingrid_basic_usage.cpp       # 基础示例
+└── build/
 ```
 
-### 数据结构定义
+## 模块设计
 
-* **`SereinMicroNode`**：最小空间数据节点。
-* `float value`：节点的特征值或置信度。
-* `bool active`：标识节点是否被有效赋值。
+### 1. 宏观节点与微观节点
 
+- `SereinMicroNode`：表示最小格点单元
+  - `value`: 当前格点数值
+  - `active`: 是否已激活
+- `SereinMacroNode`：表示宏观块，内部持有一个连续的微观网格数组
+  - 对应块大小为 $N \times N$
+  - 支持按需扩展与懒分配
+  - 维护当前块的最大值和最大值位置，以便后续 NMS 剪枝
 
-* **`SereinMacroNode`**：宏观网格块（包含 $N \times N$ 个微观节点）。
-* **懒加载管理**：初始化时不分配微观网格内存，仅在首次写入数据时调用 `expand()` 动态分配连续数组。
-* **$O(1)$ 极值追踪**：内部实时维护块内极大值 `max_value` 及其微观坐标 `(max_u, max_v)`，为后续 NMS 提供高效宏观剪枝策略。
-* **内存安全**：基于 `std::unique_ptr` 管理连续内存，显式禁用拷贝语义，实现高效且安全的移动语义，彻底避免 `std::unordered_map` 在 Rehash 时的二次释放与深拷贝开销。
+### 2. 稀疏空间索引
 
+网格使用 64 位整数键来管理宏观块：
 
-* **`SereinGrid`**：全局空间映射网格。
-* 基于 64 位整型 Key 映射宏观坐标 $(U, V)$。
-* 内置向负无穷取整的整除与取模算法（`floor_div` / `floor_mod`），原生支持四个象限的负坐标访问。
+```cpp
+key = (U << 32) | V;
+```
 
+其中 `U` 和 `V` 为宏观块坐标，`SereinGrid` 通过 `std::unordered_map<uint64_t, SereinMacroNode>` 实现稀疏存储。
 
+### 3. 负坐标支持
 
+库内部使用 `floor_div` / `floor_mod` 处理负数除法和取模，保证在负坐标轴上仍然能稳定地映射到相同的块与局部坐标。
 
-## API 接口规范
+## API 说明
 
-### 1. 初始化与配置
+### 初始化与坐标转换
 
-| 接口名称 | 参数定义 | 说明 |
+| 接口 | 签名 | 说明 |
 | --- | --- | --- |
-| `SereinGrid` | `int expansion_scale = 10, float zero_epsilon = 1e-6f, float physical_spacing = 1.0f` | 构造函数。配置宏观块展开尺度 $N$（即块大小 $N \times N$）、零值判决容差 tolerance 及物理采样间距。 |
-| `get_scale` | - | 返回宏观块尺度 $N$。 |
-| `get_spacing` | - | 返回采样点的物理间距 `spacing`。 |
-| `get_zero_epsilon` | - | 返回判决零值的容差阈值 `zero_epsilon`。 |
-| `macro_to_global` | `int U, int V, int& x, int& y` | 将宏观坐标转换为对应宏观块原点的全局坐标。 |
-| `local_to_global` | `int U, int V, int u, int v, int& x, int& y` | 将宏观坐标和微观局部坐标转换为全局坐标。 |
+| `SereinGrid` | `SereinGrid(int expansion_scale = 10, float zero_epsilon = 1e-6f, float physical_spacing = 1.0f)` | 构造函数，设置块大小、零值容差和物理间距 |
+| `get_scale` | `int get_scale() const` | 返回宏观块大小 `N` |
+| `get_spacing` | `float get_spacing() const` | 返回物理间距 |
+| `get_zero_epsilon` | `float get_zero_epsilon() const` | 返回零值判定容差 |
+| `global_to_local` | `void global_to_local(int x, int y, int& U, int& V, int& u, int& v) const` | 将全局坐标转换为宏观/局部坐标 |
+| `macro_to_global` | `void macro_to_global(int U, int V, int& x, int& y) const` | 将宏观块坐标转换回宏观块原点的全局坐标 |
+| `local_to_global` | `void local_to_global(int U, int V, int u, int v, int& x, int& y) const` | 将宏观坐标和局部坐标组合成全局坐标 |
 
-### 2. 数据读写与更新(基于全局坐标)
+### 数据读写
 
-| 接口名称 | 参数定义 | 说明 |
+| 接口 | 签名 | 说明 |
 | --- | --- | --- |
-| `set_value` | `int x, int y, float value` | 覆盖写入坐标 $(x, y)$ 的数值。若 `value` 为 0（或小于容差），自动清除节点；若导致宏观块清空则自动收回映射。 |
-| `add_value` | `int x, int y, float delta` | 在坐标 $(x, y)$ 处累加数值，自动触发宏观块的按需展开。 |
-| `get_value` | `int x, int y` | 查询坐标 $(x, y)$ 的数值。若处于未展开块或未激活节点，直接返回 `0.0f`。 |
-| `move_point` | `int src_x, int src_y, int dx, int dy` | 原子化平移操作。将 `(src_x, src_y)` 的值清零并累加至 `(src_x + dx, src_y + dy)`。 |
-| `clear` | - | 释放所有已分配的宏观节点及微观数组内存。 |
+| `set_value` | `void set_value(int x, int y, float value)` | 写入坐标 `(x, y)` 的值；当值接近 0 时自动清理节点 |
+| `add_value` | `void add_value(int x, int y, float delta)` | 在某点累加值 |
+| `move_point` | `void move_point(int src_x, int src_y, int dx, int dy)` | 将值从一个位置移动到另一个位置 |
+| `get_value` | `float get_value(int x, int y) const` | 读取位置值，若不存在则返回 `0.0f` |
+| `clear` | `void clear()` | 清空所有数据 |
 
-### 3. NMS 极值提取与空间合并
+### NMS 与合并
 
-| 接口名称 | 参数定义 | 返回值 | 说明 |
-| --- | --- | --- | --- |
-| `is_local_maximum` | `int x, int y, float R_phys` | `bool` | 判断坐标 $(x, y)$ 是否为物理半径 `R_phys` 范围内的局部极大值（内建三层剪枝算法）。 |
-| `find_local_maxima` | `float R_phys` | `std::vector<std::pair<int, int>>` | 遍历网格内所有激活点，提取物理半径 `R_phys` 范围内的局部极大值坐标集合。 |
-| `merge_from` | `const SereinGrid& other, int offset_x = 0, int offset_y = 0` | `void` | 将另一个网格的数据图层融合至当前网格，支持施加全局空间坐标偏移。 |
+| 接口 | 签名 | 说明 |
+| --- | --- | --- |
+| `is_local_maximum` | `bool is_local_maximum(int x, int y, float R_phys) const` | 判断某点是否在半径 `R_phys` 内为局部极大值 |
+| `find_local_maxima` | `std::vector<std::pair<int, int>> find_local_maxima(float R_phys) const` | 返回所有局部极大值坐标 |
+| `merge_from` | `void merge_from(const SereinGrid& other, int offset_x = 0, int offset_y = 0)` | 将另一张网格数据融合到当前网格，可带坐标偏移 |
 
+## 核心算法
 
+### 1. 坐标映射
 
-## 核心算法细节
+全局坐标 $(x, y)$ 转换为宏观块坐标 $(U, V)$ 及局部坐标 $(u, v)$ 的规则如下：
 
-### 1. 两级坐标映射
+$$
+U = \left\lfloor \frac{x}{N} \right\rfloor, \quad V = \left\lfloor \frac{y}{N} \right\rfloor
+$$
 
-全局坐标 $(x, y)$ 到宏观块坐标 $(U, V)$ 及微观局部坐标 $(u, v)$ 的映射公式如下：
+$$
+u = x \bmod N, \quad v = y \bmod N
+$$
 
-$$U = \lfloor x / N \rfloor, \quad V = \lfloor y / N \rfloor$$
+其中 `N` 是宏观块大小。由于使用了负坐标兼容的整除/取模逻辑，因此该映射在四个象限中都保持一致。
 
-$$u = x \pmod N, \quad v = y \pmod N$$
+### 2. NMS 剪枝
 
-代码内部通过 `floor_div` 与 `floor_mod` 保证负坐标轴的连续性与正向对齐。
+`is_local_maximum` 和 `find_local_maxima` 使用了三层剪枝思路：
 
-### 2. 带极值剪枝的极速 NMS 算法
+1. 宏观块级剪枝：如果邻近块的最大值明显小于当前点，则不必深入该块。
+2. 极值优先判定：如果邻近块已记录的最大值能确定当前点被抑制，则直接短路。
+3. 微观精筛：只有在必要时才逐个检查块内具体位置。
 
-`is_local_maximum` 采用 **Max-Pooling 思想** 进行三层加速判定：
+### 3. 空间距离
 
-1. **宏观块剪枝**：遍历邻近宏观块时，若目标块的 `target_macro.max_value < current_val`，说明该块内无任何节点能抑制当前点，直接跳过整个 $N \times N$ 块。
-2. **优先压制判定**：若目标块的极大值大于当前点，优先获取该块记录的最高点坐标 `(max_u, max_v)`。若该最高点落在半径域内，直接断言当前点被抑制，瞬间退出循环（$O(1)$ 击杀）。
-3. **微观精筛**：仅当最高点在半径域外、但块内可能存在较小但距离更近的优势点时，才退化为微观节点遍历。
+当前实现使用 60° 斜坐标系的距离度量：
 
-### 3. 60 度斜坐标系空间度量
+$$
+\text{Dist}^2 = dx^2 + dx \cdot dy + dy^2
+$$
 
-距离判决计算采用了 60 度斜角坐标系（Hexagonal / Rhombohedral Metric）：
-
-$$\text{Dist}^2 = dx^2 + dx \cdot dy + dy^2$$
-
-相较于传统直角坐标系，该度量方式在等边三角形/六边形空间采样点阵中具有更优的各向同性。
-
+该距离形式在六边形或菱形采样结构中比传统欧式距离更接近真实邻域关系。
 
 ## 使用示例
 
@@ -136,27 +175,35 @@ $$\text{Dist}^2 = dx^2 + dx \cdot dy + dy^2$$
 
 int main()
 {
-    // 初始化网格：展开尺度 N=10，零容差 1e-5，物理间距 0.5m
-    sereingrid::SereinGrid grid(10, 1e-5f, 0.5f);
+    sereingrid::SereinGrid grid(10, 1e-6f, 1.0f);
 
-    // 写入模拟置信度数据
-    grid.set_value(15, 20, 0.85f);
-    grid.set_value(16, 20, 0.92f); // 邻接高值点，应抑制 (15, 20)
-    grid.set_value(-5, -5, 0.78f); // 负坐标点
+    grid.set_value(0, 0, 10.0f);
+    grid.set_value(1, 1, 6.0f);
+    grid.set_value(-5, -5, 7.5f);
 
-    // 查询指定点
-    std::cout << "Value at (16, 20): " << grid.get_value(16, 20) << std::endl;
+    int U, V, u, v;
+    int x, y;
 
-    // 执行半径 R_phys = 1.0m 的非极大值抑制 (NMS)
-    auto maxima = grid.find_local_maxima(1.0f);
+    grid.global_to_local(-5, -5, U, V, u, v);
+    grid.local_to_global(U, V, u, v, x, y);
 
-    std::cout << "Detected Local Maxima Count: " << maxima.size() << std::endl;
-    for (const auto& [x, y] : maxima)
-    {
-        std::cout << "Max at (" << x << ", " << y << ") = " << grid.get_value(x, y) << std::endl;
-    }
+    std::cout << "global_to_local: (U, V, u, v) = (" << U << ", " << V << ", " << u << ", " << v << ")\n";
+    std::cout << "round-trip: (x, y) = (" << x << ", " << y << ")\n";
+
+    auto maxima = grid.find_local_maxima(3.0f);
+    std::cout << "local maxima count: " << maxima.size() << '\n';
 
     return 0;
 }
-
 ```
+
+## 备注
+
+- 这是一个头文件型库，编译无需额外链接。
+- 单元测试位于 [tests/test_sereingrid.cpp](tests/test_sereingrid.cpp)。
+- 示例程序位于 [examples/sereingrid_basic_usage.cpp](examples/sereingrid_basic_usage.cpp)。
+- 当前仓库已通过 CMake + CTest 构建和测试校验。
+
+## 许可证
+
+当前仓库未附带显式许可证文件，使用前请确认目标项目的许可要求。
