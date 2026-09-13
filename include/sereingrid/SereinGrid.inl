@@ -265,7 +265,8 @@ inline void SereinGrid::merge_from(const SereinGrid& other, int offset_x, int of
             float value = pair.second;
             int local_u = local_index / N;
             int local_v = local_index % N;
-            float existing = target_macro.fine_grid[local_index].active ? target_macro.fine_grid[local_index].value : 0.0f;
+            float existing =
+                target_macro.fine_grid[local_index].active ? target_macro.fine_grid[local_index].value : 0.0f;
             target_macro.set_micro_value(local_u, local_v, N, existing + value, zero_epsilon);
         }
 
