@@ -215,23 +215,63 @@ inline void SereinGrid::merge_from(const SereinGrid& other, int offset_x, int of
         throw std::invalid_argument("SereinGrid scales and physical spacing must match");
     }
 
+    std::unordered_map<uint64_t, std::vector<std::pair<int, float>>> grouped_values;
+    grouped_values.reserve(other.space.size());
+
     for (const auto& entry : other.space) {
-        const auto& other_macro = entry.second;
-        if (!other_macro.is_expanded) {
+        const detail::SereinMacroNode& other_macro = entry.second;
+        if (!other_macro.is_expanded || other_macro.active_indices.empty()) {
             continue;
         }
 
         int32_t U = static_cast<int32_t>(entry.first >> 32);
         int32_t V = static_cast<int32_t>(entry.first & 0xFFFFFFFFu);
-        for (int u = 0; u < N; ++u) {
-            for (int v = 0; v < N; ++v) {
-                const detail::SereinMicroNode& node = other_macro.fine_grid[u * N + v];
-                if (node.active) {
-                    int src_x = U * N + u;
-                    int src_y = V * N + v;
-                    add_value(src_x + offset_x, src_y + offset_y, node.value);
-                }
+
+        for (int cell_index : other_macro.active_indices) {
+            int u = cell_index / N;
+            int v = cell_index % N;
+            const detail::SereinMicroNode& node = other_macro.fine_grid[cell_index];
+            if (!node.active) {
+                continue;
             }
+
+            int src_x = U * N + u;
+            int src_y = V * N + v;
+            int target_x = src_x + offset_x;
+            int target_y = src_y + offset_y;
+
+            int target_U, target_V, target_u, target_v;
+            global_to_local(target_x, target_y, target_U, target_V, target_u, target_v);
+
+            uint64_t key = get_key(target_U, target_V);
+            grouped_values[key].emplace_back(target_u * N + target_v, node.value);
+        }
+    }
+
+    for (auto& entry : grouped_values) {
+        uint64_t key = entry.first;
+        auto it = space.find(key);
+        if (it == space.end()) {
+            it = space.emplace(key, detail::SereinMacroNode()).first;
+            it->second.expand(N);
+        }
+        else if (!it->second.is_expanded) {
+            it->second.expand(N);
+        }
+
+        detail::SereinMacroNode& target_macro = it->second;
+        for (const auto& pair : entry.second) {
+            int local_index = pair.first;
+            float value = pair.second;
+            int local_u = local_index / N;
+            int local_v = local_index % N;
+            float existing =
+                target_macro.fine_grid[local_index].active ? target_macro.fine_grid[local_index].value : 0.0f;
+            target_macro.set_micro_value(local_u, local_v, N, existing + value, zero_epsilon);
+        }
+
+        if (target_macro.empty()) {
+            space.erase(key);
         }
     }
 }
