@@ -107,7 +107,7 @@ key = (U << 32) | V;
 
 | 接口 | 签名 | 说明 |
 | --- | --- | --- |
-| `SereinGrid` | `SereinGrid(int expansion_scale = 10, float zero_epsilon = 1e-6f, float physical_spacing = 1.0f)` | 构造函数，设置块大小、零值容差和物理间距 |
+| `SereinGrid` | `SereinGrid(int expansion_scale = 10, float zero_epsilon = 1e-6f, float physical_spacing = 1.0f)` | 构造函数，设置块大小、零值容差和物理间距 [`(x, y)`与`(x + 1, y)`间距] |
 | `get_scale` | `int get_scale() const` | 返回宏观块大小 `N` |
 | `get_spacing` | `float get_spacing() const` | 返回物理间距 |
 | `get_zero_epsilon` | `float get_zero_epsilon() const` | 返回零值判定容差 |
