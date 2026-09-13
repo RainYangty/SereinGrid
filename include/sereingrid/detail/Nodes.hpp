@@ -3,6 +3,7 @@
 
 #include <limits>
 #include <memory>
+#include <unordered_set>
 #include <utility>
 
 namespace sereingrid
@@ -24,6 +25,7 @@ struct SereinMacroNode
     int max_u = -1;
     int max_v = -1;
     std::unique_ptr<SereinMicroNode[]> fine_grid = nullptr;
+    std::unordered_set<int> active_indices;
 
     SereinMacroNode() = default;
     SereinMacroNode(const SereinMacroNode&) = delete;
@@ -35,7 +37,8 @@ struct SereinMacroNode
         max_value(other.max_value),
         max_u(other.max_u),
         max_v(other.max_v),
-        fine_grid(std::move(other.fine_grid))
+        fine_grid(std::move(other.fine_grid)),
+        active_indices(std::move(other.active_indices))
     {
         other.reset_metadata();
     }
@@ -49,6 +52,7 @@ struct SereinMacroNode
             max_u = other.max_u;
             max_v = other.max_v;
             fine_grid = std::move(other.fine_grid);
+            active_indices = std::move(other.active_indices);
             other.reset_metadata();
         }
         return *this;
@@ -61,6 +65,7 @@ struct SereinMacroNode
         max_value = -std::numeric_limits<float>::infinity();
         max_u = -1;
         max_v = -1;
+        active_indices.clear();
     }
 
     void expand(int N, float default_val = 0.0f)
@@ -80,6 +85,7 @@ struct SereinMacroNode
         active_count = 0;
         max_u = -1;
         max_v = -1;
+        active_indices.clear();
     }
 
     void recompute_max_value(int N)
@@ -122,9 +128,11 @@ struct SereinMacroNode
         fine_grid[index].active = val != 0.0f;
         if (!old_active && fine_grid[index].active) {
             ++active_count;
+            active_indices.insert(index);
         }
         else if (old_active && !fine_grid[index].active) {
             --active_count;
+            active_indices.erase(index);
         }
 
         if (!fine_grid[index].active) {
