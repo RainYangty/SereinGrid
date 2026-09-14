@@ -206,4 +206,4 @@ int main()
 
 ## 许可证
 
-当前仓库未附带显式许可证文件，使用前请确认目标项目的许可要求。
+本项目采用 Apache License 2.0，详见 [LICENSE](LICENSE)。

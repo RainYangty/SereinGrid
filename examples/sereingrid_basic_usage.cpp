@@ -1,3 +1,5 @@
+// Copyright 2026 RainYangty - SPDX-License-Identifier: Apache-2.0
+
 #include "../include/SereinGrid.hpp"
 #include <iostream>
 #include <vector>
