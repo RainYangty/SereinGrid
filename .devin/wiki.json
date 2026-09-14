@@ -1,0 +1,97 @@
+{
+  "repo_notes": [
+    {
+      "content": "所有 wiki 页面标题、正文和说明文字必须使用简体中文；仅在中文名不通用时保留 OCR、ADB、CLI、JSON、API 等缩写。"
+    },
+    {
+      "content": "SereinGrid 是一个 C++14 header-only 库，用于稀疏二维空间数据的分层网格存储、动态累加和基于非极大值抑制的局部极大值筛选。"
+    },
+    {
+      "content": "文档应以 include/SereinGrid.hpp 作为公共入口，结合 include/sereingrid/SereinGrid.hpp 与 SereinGrid.inl 说明核心类的 API 和实现；detail/Coordinates.hpp 与 detail/Nodes.hpp 是理解坐标映射、稀疏块存储和块级元数据的关键实现。"
+    },
+    {
+      "content": "这是一个仅依赖 C++14 标准库的接口库，不要把 build/ 目录生成物当作源码。CMakeLists.txt 定义 SereinGrid 接口目标，并通过 tests/test_sereingrid.cpp 和 examples/sereingrid_basic_usage.cpp 展示验证与使用方式。"
+    },
+    {
+      "content": "说明负坐标时必须强调 floor_div 和 floor_mod 保证宏观坐标与局部坐标的一致映射；说明 NMS 时应结合 physical_spacing 和 60 度斜坐标系距离公式，而不是默认假设使用普通欧式距离。"
+    }
+  ],
+  "pages": [
+    {
+      "title": "项目概览",
+      "purpose": "介绍 SereinGrid 的定位、C++14 header-only 形态、顶层目录结构，以及公共入口、核心实现、测试和示例之间的阅读路径。"
+    },
+    {
+      "title": "快速开始",
+      "purpose": "说明如何直接包含 include/SereinGrid.hpp 或通过 CMake FetchContent 引入库，给出最小网格读写示例，并说明构建示例和测试的入口。",
+      "parent": "项目概览"
+    },
+    {
+      "title": "核心概念与设计取舍",
+      "purpose": "解释两级稀疏网格、宏观块懒加载、连续微观存储、零值清理、负坐标支持和局部极大值筛选的设计目标，并讨论它们在内存占用和查询效率上的取舍。",
+      "parent": "项目概览"
+    },
+    {
+      "title": "公共 API",
+      "purpose": "按功能总览 SereinGrid 对外暴露的构造、配置、坐标转换、数据修改、空间查询、合并和清空接口，并将 API 行为与实现文件对应起来。"
+    },
+    {
+      "title": "构造与配置",
+      "purpose": "文档化 SereinGrid 构造函数及 expansion_scale、zero_epsilon、physical_spacing 三个配置项，说明 get_scale、get_spacing 和 get_zero_epsilon 的语义及默认值。",
+      "parent": "公共 API"
+    },
+    {
+      "title": "数值访问与修改",
+      "purpose": "说明 set_value、add_value、move_point、get_value 和 clear 的行为、零值容差处理、节点激活状态变化，以及不存在坐标的读取结果。",
+      "parent": "公共 API"
+    },
+    {
+      "title": "坐标转换",
+      "purpose": "详细说明 global_to_local、macro_to_global 和 local_to_global 的参数与往返关系，覆盖宏观坐标、局部坐标和负坐标输入。",
+      "parent": "公共 API"
+    },
+    {
+      "title": "空间查询与网格合并",
+      "purpose": "文档化 is_local_maximum、find_local_maxima 和 merge_from，解释物理半径、空间距离、局部极大值结果以及带坐标偏移合并的语义。",
+      "parent": "公共 API"
+    },
+    {
+      "title": "内部实现",
+      "purpose": "概述 SereinGrid 的实现文件、内部数据流和主要辅助类型，建立公共 API 调用、宏观块查找、微观节点更新和 NMS 查询之间的关系。"
+    },
+    {
+      "title": "宏观与微观节点存储",
+      "purpose": "详细说明 SereinMacroNode 和 SereinMicroNode 的字段与生命周期，解释 fine_grid 的按需展开、active_indices、active_count、最大值元数据及移动语义。",
+      "parent": "内部实现"
+    },
+    {
+      "title": "坐标数学与哈希键",
+      "purpose": "说明 detail/Coordinates.hpp 中 floor_div、floor_mod、坐标转换函数和 make_key 的实现，解释负坐标如何稳定映射到块内位置及 uint64_t 键如何编码宏观坐标。",
+      "parent": "内部实现"
+    },
+    {
+      "title": "NMS 剪枝算法",
+      "purpose": "解释局部极大值检测使用的 60 度斜坐标系距离、物理间距换算、宏观块最大值剪枝和微观节点精查流程，并说明结果如何避免邻近较小值重复保留。",
+      "parent": "内部实现"
+    },
+    {
+      "title": "头文件布局与包含策略",
+      "purpose": "说明 include/SereinGrid.hpp 公共兼容入口、sereingrid/SereinGrid.hpp 声明、SereinGrid.inl 实现以及 detail 头文件之间的包含关系，并解释 header-only 编译方式。",
+      "parent": "内部实现"
+    },
+    {
+      "title": "开发流程",
+      "purpose": "概述本项目从 CMake 配置、编译、运行示例到执行测试的本地开发流程，并指出源码、生成物和验证入口的边界。"
+    },
+    {
+      "title": "构建系统",
+      "purpose": "文档化 CMakeLists.txt 定义的 SereinGrid INTERFACE 目标、C++14 要求、BUILD_TESTS 与 BUILD_EXAMPLES 选项，以及 Debug 或 Release 构建时的目标关系。",
+      "parent": "开发流程"
+    },
+    {
+      "title": "测试与示例",
+      "purpose": "说明 tests/test_sereingrid.cpp 和 examples/sereingrid_basic_usage.cpp 的职责，覆盖负坐标、坐标往返、零值清理、NMS、合并和移动后节点复用等验证场景。",
+      "parent": "开发流程"
+    }
+  ]
+}
