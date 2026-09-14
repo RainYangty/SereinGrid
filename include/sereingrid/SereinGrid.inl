@@ -1,3 +1,5 @@
+// Copyright 2026 RainYangty - SPDX-License-Identifier: Apache-2.0
+
 #ifndef SEREIN_GRID_SEREIN_GRID_INL
 #define SEREIN_GRID_SEREIN_GRID_INL
 

@@ -1,3 +1,5 @@
+// Copyright 2026 RainYangty - SPDX-License-Identifier: Apache-2.0
+
 #ifndef SEREIN_GRID_DETAIL_COORDINATES_HPP
 #define SEREIN_GRID_DETAIL_COORDINATES_HPP
 
