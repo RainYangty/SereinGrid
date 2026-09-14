@@ -1,6 +1,8 @@
 # SereinGrid
 
 ![Language](https://img.shields.io/badge/language-C%2B%2B14-brightgreen.svg)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/RainYangty/SereinGrid)
 
 `SereinGrid` 是一个用于稀疏二维空间数据的高性能分层网格库，适用于空间特征提取、动态累加以及基于非极大值抑制（NMS）的局部极大值筛选。
 
