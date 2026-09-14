@@ -61,7 +61,7 @@ SereinGrid/
 ├── CMakeLists.txt
 ├── README.md
 ├── include/
-│   ├── SereinGrid.hpp                     # 公共兼容入口
+│   ├── SereinGrid.hpp                    # 公共兼容入口
 │   └── sereingrid/
 │       ├── SereinGrid.hpp                # 核心类声明
 │       ├── SereinGrid.inl                # 实现定义
@@ -69,9 +69,9 @@ SereinGrid/
 │           ├── Coordinates.hpp           # 坐标转换与键生成
 │           └── Nodes.hpp                 # 宏观/微观节点定义
 ├── tests/
-│   └── test_sereingrid.cpp              # 单元测试
+│   └── test_sereingrid.cpp               # 单元测试
 ├── examples/
-│   └── sereingrid_basic_usage.cpp       # 基础示例
+│   └── sereingrid_basic_usage.cpp        # 基础示例
 └── build/
 ```
 
