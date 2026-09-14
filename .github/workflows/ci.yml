@@ -36,6 +36,31 @@ jobs:
               core.setFailed(errors.join('\n'));
             }
 
+  license-header:
+    name: License header
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Check source file copyright headers
+      shell: bash
+      run: |
+        set -euo pipefail
+        expected='// Copyright 2026(-[0-9]{4})? RainYangty - SPDX-License-Identifier: Apache-2.0'
+        failed=0
+
+        while IFS= read -r -d '' file; do
+          if [[ "$(sed -n '1p' "$file")" != "$expected" ]]; then
+            echo "Missing or invalid copyright header: $file"
+            failed=1
+          fi
+        done < <(find include tests examples -type f \( -name '*.hpp' -o -name '*.inl' -o -name '*.cpp' \) -print0)
+
+        if [[ "$failed" -ne 0 ]]; then
+          exit 1
+        fi
+
   build-and-test:
     # 动态显示在 GitHub UI 上的任务名称（例如：ubuntu-latest (gcc)）
     name: ${{ matrix.os }} (${{ matrix.compiler }})
