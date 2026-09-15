@@ -151,6 +151,9 @@ $$
 
 其中 `N` 是宏观块大小。由于使用了负坐标兼容的整除/取模逻辑，因此该映射在四个象限中都保持一致。
 
+可以看手写图示便于理解(字丑www ᯠ  _   ̫  _ ̥ ᯄ ੭)
+![concept](assets/serein_grid_concept.jpeg)
+
 ### 2. NMS 剪枝
 
 `is_local_maximum` 和 `find_local_maxima` 使用了三层剪枝思路：
