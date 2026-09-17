@@ -118,6 +118,13 @@ inline float SereinGrid::get_value(int x, int y) const
     return node.active ? node.value : 0.0f;
 }
 
+inline double SereinGrid::micro_distance_squared(int du, int dv) const
+{
+    const double dx = static_cast<double>(du) * spacing;
+    const double dy = static_cast<double>(dv) * spacing;
+    return dx * dx - dx * dy + dy * dy;
+}
+
 inline bool SereinGrid::is_local_maximum(int x, int y, float R_phys) const
 {
     float current_val = get_value(x, y);
@@ -129,7 +136,7 @@ inline bool SereinGrid::is_local_maximum(int x, int y, float R_phys) const
     global_to_local(x, y, center_U, center_V, center_u, center_v);
     double radius_index = static_cast<double>(R_phys) / spacing;
     int macro_radius = static_cast<int>(std::ceil(radius_index / N)) + 1;
-    double R_sq = radius_index * radius_index;
+    double R_sq = static_cast<double>(R_phys) * R_phys;
 
     for (int dU = -macro_radius; dU <= macro_radius; ++dU) {
         for (int dV = -macro_radius; dV <= macro_radius; ++dV) {
@@ -149,9 +156,7 @@ inline bool SereinGrid::is_local_maximum(int x, int y, float R_phys) const
                 int peak_x = target_U * N + target_macro.max_u;
                 int peak_y = target_V * N + target_macro.max_v;
                 if (peak_x != x || peak_y != y) {
-                    double dx = static_cast<double>(peak_x - x);
-                    double dy = static_cast<double>(peak_y - y);
-                    double peak_dist_sq = dx * dx + dx * dy + dy * dy;
+                    double peak_dist_sq = micro_distance_squared(peak_x - x, peak_y - y);
                     if (target_macro.max_value > current_val && peak_dist_sq <= R_sq) {
                         return false;
                     }
@@ -172,9 +177,7 @@ inline bool SereinGrid::is_local_maximum(int x, int y, float R_phys) const
                     if (!neighbor.active || neighbor.value <= current_val) {
                         continue;
                     }
-                    double dx = static_cast<double>(nx - x);
-                    double dy = static_cast<double>(ny - y);
-                    if (dx * dx + dx * dy + dy * dy <= R_sq) {
+                    if (micro_distance_squared(nx - x, ny - y) <= R_sq) {
                         return false;
                     }
                 }
