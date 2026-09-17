@@ -127,7 +127,7 @@ inline bool SereinGrid::is_local_maximum(int x, int y, float R_phys) const
 
     int center_U, center_V, center_u, center_v;
     global_to_local(x, y, center_U, center_V, center_u, center_v);
-    double radius_index = static_cast<double>(R_phys) * N / spacing;
+    double radius_index = static_cast<double>(R_phys) / spacing;
     int macro_radius = static_cast<int>(std::ceil(radius_index / N)) + 1;
     double R_sq = radius_index * radius_index;
 
