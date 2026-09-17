@@ -56,9 +56,15 @@ void test_micro_distance()
 {
     Grid grid(10, 1e-6f, 0.5f);
 
-    expect_near(static_cast<float>(grid.micro_distance_squared(2, 1)), 0.75f, 1e-5f,
+    expect_near(
+        static_cast<float>(grid.micro_distance_squared(2, 1)),
+        0.75f,
+        1e-5f,
         "micro distance should use the 60-degree metric and physical spacing");
-    expect_near(static_cast<float>(grid.micro_distance_squared(0, 0)), 0.0f, 1e-5f,
+    expect_near(
+        static_cast<float>(grid.micro_distance_squared(0, 0)),
+        0.0f,
+        1e-5f,
         "micro distance for zero displacement should be zero");
 }
 
