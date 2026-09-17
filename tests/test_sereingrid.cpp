@@ -52,6 +52,22 @@ void test_coordinate_conversion()
     expect(x == -12 && y == -25, "local_to_global did not round-trip the coordinates");
 }
 
+void test_micro_distance()
+{
+    Grid grid(10, 1e-6f, 0.5f);
+
+    expect_near(
+        static_cast<float>(grid.micro_distance_squared(2, 1)),
+        0.75f,
+        1e-5f,
+        "micro distance should use the 60-degree metric and physical spacing");
+    expect_near(
+        static_cast<float>(grid.micro_distance_squared(0, 0)),
+        0.0f,
+        1e-5f,
+        "micro distance for zero displacement should be zero");
+}
+
 void test_add_and_pruning()
 {
     Grid grid = make_grid();
@@ -144,6 +160,7 @@ int main()
     } test_cases[] = {
         { "negative coordinates", test_negative_coordinates },
         { "coordinate conversion", test_coordinate_conversion },
+        { "micro distance", test_micro_distance },
         { "add and pruning", test_add_and_pruning },
         { "NMS suppression", test_nms_suppression },
         { "NMS physical radius", test_nms_uses_physical_radius },

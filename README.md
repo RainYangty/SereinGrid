@@ -117,6 +117,7 @@ key = (static_cast<uint64_t>(static_cast<uint32_t>(U)) << 32)
 | `global_to_local` | `void global_to_local(int x, int y, int& U, int& V, int& u, int& v) const` | 将全局坐标转换为宏观/局部坐标 |
 | `macro_to_global` | `void macro_to_global(int U, int V, int& x, int& y) const` | 将宏观块坐标转换回宏观块原点的全局坐标 |
 | `local_to_global` | `void local_to_global(int U, int V, int u, int v, int& x, int& y) const` | 将宏观坐标和局部坐标组合成全局坐标 |
+| `micro_distance_squared` | `double micro_distance_squared(int du, int dv) const` | 根据微观位移 `(du, dv)` 计算物理平方距离，使用 60° 斜坐标度量 |
 
 ### 数据读写
 
@@ -168,8 +169,10 @@ $$
 当前实现使用 60° 斜坐标系的距离度量。`R_phys` 先根据相邻格点物理间距 `spacing` 换算为格点索引半径 `R_phys / spacing`，再与下式的平方距离比较：
 
 $$
-\text{Dist}^2 = dx^2 + dx \cdot dy + dy^2
+	ext{Dist}^2 = du^2 - du \cdot dv + dv^2
 $$
+
+其中 `du` 和 `dv` 是两个微观位移分量；它们会先分别乘以 `spacing`，因此返回值与 `R_phys` 使用相同的物理距离量纲。
 
 该距离形式在六边形或菱形采样结构中比传统欧式距离更接近真实邻域关系。
 

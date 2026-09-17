@@ -36,6 +36,7 @@ public:
     void global_to_local(int x, int y, int& U, int& V, int& u, int& v) const;
     void macro_to_global(int U, int V, int& x, int& y) const;
     void local_to_global(int U, int V, int u, int v, int& x, int& y) const;
+    double micro_distance_squared(int du, int dv) const;
 
     void set_value(int x, int y, float value);
     void add_value(int x, int y, float delta);
