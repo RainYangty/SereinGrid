@@ -94,10 +94,11 @@ SereinGrid/
 网格使用 64 位整数键来管理宏观块：
 
 ```cpp
-key = (U << 32) | V;
+key = (static_cast<uint64_t>(static_cast<uint32_t>(U)) << 32)
+  | static_cast<uint32_t>(V);
 ```
 
-其中 `U` 和 `V` 为宏观块坐标，`SereinGrid` 通过 `std::unordered_map<uint64_t, SereinMacroNode>` 实现稀疏存储。
+其中 `U` 和 `V` 为宏观块坐标。转换为 `uint32_t` 后再拼接，保证负坐标也能进行定义明确且可逆的编码；`SereinGrid` 通过 `std::unordered_map<uint64_t, SereinMacroNode>` 实现稀疏存储。
 
 ### 3. 负坐标支持
 
@@ -123,7 +124,7 @@ key = (U << 32) | V;
 | --- | --- | --- |
 | `set_value` | `void set_value(int x, int y, float value)` | 写入坐标 `(x, y)` 的值；当值接近 0 时自动清理节点 |
 | `add_value` | `void add_value(int x, int y, float delta)` | 在某点累加值 |
-| `move_point` | `void move_point(int src_x, int src_y, int dx, int dy)` | 将值从一个位置移动到另一个位置 |
+| `move_point` | `void move_point(int src_x, int src_y, int dx, int dy)` | 清空源点，并将其值累加到偏移后的目标点；目标点已有值时会与之相加 |
 | `get_value` | `float get_value(int x, int y) const` | 读取位置值，若不存在则返回 `0.0f` |
 | `clear` | `void clear()` | 清空所有数据 |
 
@@ -131,7 +132,7 @@ key = (U << 32) | V;
 
 | 接口 | 签名 | 说明 |
 | --- | --- | --- |
-| `is_local_maximum` | `bool is_local_maximum(int x, int y, float R_phys) const` | 判断某点是否在半径 `R_phys` 内为局部极大值 |
+| `is_local_maximum` | `bool is_local_maximum(int x, int y, float R_phys) const` | 判断正值点是否在物理半径 `R_phys` 内为局部极大值；当前值小于等于 `0` 时直接返回 `false` |
 | `find_local_maxima` | `std::vector<std::pair<int, int>> find_local_maxima(float R_phys) const` | 返回所有局部极大值坐标 |
 | `merge_from` | `void merge_from(const SereinGrid& other, int offset_x = 0, int offset_y = 0)` | 将另一张网格数据融合到当前网格，可带坐标偏移 |
 
@@ -164,7 +165,7 @@ $$
 
 ### 3. 空间距离
 
-当前实现使用 60° 斜坐标系的距离度量：
+当前实现使用 60° 斜坐标系的距离度量。`R_phys` 先根据相邻格点物理间距 `spacing` 换算为格点索引半径 `R_phys / spacing`，再与下式的平方距离比较：
 
 $$
 \text{Dist}^2 = dx^2 + dx \cdot dy + dy^2

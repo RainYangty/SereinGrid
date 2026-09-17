@@ -86,6 +86,17 @@ void test_nms_suppression()
     expect(found_center && found_far, "NMS returned unexpected maximum coordinates");
 }
 
+void test_nms_uses_physical_radius()
+{
+    Grid grid = make_grid();
+
+    grid.set_value(0, 0, 8.0f);
+    grid.set_value(2, 0, 9.0f);
+
+    expect(grid.is_local_maximum(0, 0, 1.0f), "NMS should not scale the physical radius by the macro size");
+    expect(!grid.is_local_maximum(0, 0, 2.0f), "NMS should suppress points within the physical radius");
+}
+
 void test_grid_merge()
 {
     Grid target = make_grid();
@@ -135,6 +146,7 @@ int main()
         { "coordinate conversion", test_coordinate_conversion },
         { "add and pruning", test_add_and_pruning },
         { "NMS suppression", test_nms_suppression },
+        { "NMS physical radius", test_nms_uses_physical_radius },
         { "grid merge", test_grid_merge },
         { "moved-from macro node reuse", test_moved_from_macro_node_can_be_reused },
     };
